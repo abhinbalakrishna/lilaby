@@ -2,7 +2,6 @@
 
 "use client"; // Directive to ensure this is a client-side component
 
-import Head from 'next/head';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -135,12 +134,6 @@ export default function Home() {
   
   return (
     <div className="site-container">
-      <Head>
-        <title>Map of Wonder | Explore Our World</title>
-        <meta name="description" content="Discover the best locations to visit around the world" />
-        <link rel="icon" href="/favicon.ico" />
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet" />
-      </Head>
       
       <Header />
       
