@@ -1,103 +1,168 @@
-import Image from "next/image";
+// pages/index.js
+
+"use client"; // Directive to ensure this is a client-side component
+
+import Head from 'next/head';
+import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 export default function Home() {
+  const containerRef = useRef(null);
+  const mousePosition = useRef({ x: 0, y: 0 });
+  const [heroOpacity, setHeroOpacity] = useState(1);
+  
+  useEffect(() => {
+    // Handle scroll for hero section opacity
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      
+      // Fade hero section as user scrolls down
+      if (scrollY > 100) {
+        setHeroOpacity(Math.max(1 - scrollY / 500, 0.2));
+      } else {
+        setHeroOpacity(1);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    // Scene setup
+    const scene = new THREE.Scene();
+    
+    // Camera setup
+    const camera = new THREE.PerspectiveCamera(
+      75, 
+      window.innerWidth / window.innerHeight, 
+      0.1, 
+      1000
+    );
+    camera.position.z = 200;
+    
+    // Renderer setup
+    const renderer = new THREE.WebGLRenderer({ 
+      alpha: true,
+      antialias: true 
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    containerRef.current.appendChild(renderer.domElement);
+    
+    // Lights setup
+    const topLight = new THREE.DirectionalLight(0xffffff, 1);
+    topLight.position.set(500, 500, 500);
+    topLight.castShadow = true;
+    scene.add(topLight);
+    
+    const ambientLight = new THREE.AmbientLight(0x334455, 2);
+    scene.add(ambientLight);
+    
+    // Controls setup
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    
+    // Earth model loading
+    let earth;
+    const loader = new GLTFLoader();
+    
+    // You'll need to add the earth model to your public folder
+    loader.load('/models/earth/scene.gltf', (gltf) => {
+      earth = gltf.scene;
+      scene.add(earth);
+    });
+    
+    // Animation and render loop
+    const autoRotationSpeed = 0.005;
+    
+    const animate = () => {
+      requestAnimationFrame(animate);
+      
+      if (earth) {
+        // Auto rotation
+        earth.rotation.y += autoRotationSpeed;
+        
+        // Apply subtle tilt based on mouse position
+        earth.rotation.x = -0.2 + mousePosition.current.y * 0.4 / window.innerHeight;
+        earth.rotation.z = -0.1 + mousePosition.current.x * 0.2 / window.innerWidth;
+      }
+      
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    
+    animate();
+    
+    // Handle window resize
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Handle mouse movement
+    const handleMouseMove = (e) => {
+      mousePosition.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      
+      if (containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+      
+      controls.dispose();
+      renderer.dispose();
+    };
+  }, []);
+  
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="site-container">
+      <Head>
+        <title>Map of Wonder | Explore Our World</title>
+        <meta name="description" content="Discover the best locations to visit around the world" />
+        <link rel="icon" href="/favicon.ico" />
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet" />
+      </Head>
+      
+      <Header />
+      
+      <main className="main-content">
+        <div className="content-container">
+          <div 
+            className="hero-section" 
+            style={{ opacity: heroOpacity }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <h1 className="hero-title">Explore Our Wonderful World</h1>
+            <p className="hero-subtitle">Discover breathtaking destinations across the globe</p>
+            <button className="explore-button">Start Exploring</button>
+          </div>
+          
+          {/* Add additional content sections here - they will scroll */}
+          <div style={{ height: "200vh" }}></div>
         </div>
+        
+        <div id="globe-container" ref={containerRef} className="globe-container"></div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      
+      <Footer />
     </div>
   );
 }
